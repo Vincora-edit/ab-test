@@ -112,8 +112,17 @@
 
     // Редирект
     function performRedirect(url) {
-        log('Redirecting to:', url);
-        window.location.replace(url);
+        // Сохраняем все query параметры (UTM метки и др.)
+        var currentParams = window.location.search;
+        var redirectUrl = url;
+
+        if (currentParams) {
+            // Если у целевого URL уже есть параметры, добавляем через &
+            redirectUrl += (url.indexOf('?') === -1 ? '?' : '&') + currentParams.substring(1);
+        }
+
+        log('Redirecting to:', redirectUrl);
+        window.location.replace(redirectUrl);
     }
 
     // Отправка в аналитику
