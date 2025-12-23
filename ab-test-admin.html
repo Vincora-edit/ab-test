@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AB Test Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .install-code {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .install-code h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin-bottom: 15px;
+        }
+
+        .btn-copy {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-copy:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .tests-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .test-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .test-card.inactive {
+            opacity: 0.6;
+            border-left-color: #ccc;
+        }
+
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .test-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .test-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .test-status.active {
+            background: #10b981;
+            color: white;
+        }
+
+        .test-status.inactive {
+            background: #ef4444;
+            color: white;
+        }
+
+        .test-details {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .test-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-edit {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-toggle {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .btn-add {
+            background: #10b981;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .btn-add:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .btn-save {
+            flex: 1;
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            background: #ef4444;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 AB Test Admin Panel</h1>
+            <p>Управление A/B тестами</p>
+        </div>
+
+        <div class="install-code">
+            <h2>📋 Код для установки</h2>
+            <p style="margin-bottom: 15px; color: #666;">Вставьте этот код в &lt;head&gt; вашего сайта ПЕРЕД Яндекс.Метрикой:</p>
+            <div class="code-block">&lt;script src="http://91.222.239.217:9999/ab-test-client.js"&gt;&lt;/script&gt;</div>
+            <button class="btn-copy" onclick="copyInstallCode()">📋 Копировать код</button>
+        </div>
+
+        <div class="tests-panel">
+            <button class="btn-add" onclick="showAddModal()">➕ Создать новый тест</button>
+
+            <div id="testsList">
+                <!-- Тесты будут загружены сюда -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal для создания/редактирования теста -->
+    <div id="testModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Создать новый тест</h2>
+
+            <form id="testForm">
+                <input type="hidden" id="testId">
+
+                <div class="form-group">
+                    <label>Название теста</label>
+                    <input type="text" id="testName" required>
+                </div>
+
+                <div class="form-group">
+                    <label>URL оригинальной страницы</label>
+                    <input type="text" id="originalUrl" placeholder="/page" required>
+                </div>
+
+                <div class="form-group">
+                    <label>URL тестовой страницы</label>
+                    <input type="text" id="testUrl" placeholder="/page-test" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Процент трафика на тест (%)</label>
+                    <input type="number" id="trafficPercent" value="50" min="0" max="100" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Сопоставление URL</label>
+                    <select id="urlMatch">
+                        <option value="exact">Точное совпадение</option>
+                        <option value="contains">Содержит</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>UTM условие (опционально)</label>
+                    <input type="text" id="utmParam" placeholder="utm_source">
+                </div>
+
+                <div class="form-group">
+                    <label>Значение UTM</label>
+                    <input type="text" id="utmValue" placeholder="google">
+                </div>
+
+                <div class="form-group">
+                    <label>Оператор UTM</label>
+                    <select id="utmOperator">
+                        <option value="contains">Содержит</option>
+                        <option value="equals">Равно</option>
+                        <option value="exists">Существует</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Срок хранения cookie (дней)</label>
+                    <input type="number" id="cookieDays" value="30" min="1" required>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-save">💾 Сохранить</button>
+                    <button type="button" class="btn-cancel" onclick="closeModal()">❌ Отмена</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://91.222.239.217:9999/ab-tests-data.json';
+        const USE_LOCALSTORAGE = true; // Используем localStorage вместо API
+
+        // Загрузка тестов
+        function loadTests() {
+            if (USE_LOCALSTORAGE) {
+                const saved = localStorage.getItem('ab_tests');
+                const tests = saved ? JSON.parse(saved) : [];
+                renderTests(tests);
+            } else {
+                fetch(API_URL)
+                    .then(r => r.json())
+                    .then(data => {
+                        const tests = data.tests || data;
+                        renderTests(tests);
+                    })
+                    .catch(err => {
+                        console.error('Error loading tests:', err);
+                        document.getElementById('testsList').innerHTML = '<p style="color: #ef4444;">Ошибка загрузки тестов.</p>';
+                    });
+            }
+        }
+
+        // Сохранение в localStorage
+        function saveTests(tests) {
+            localStorage.setItem('ab_tests', JSON.stringify(tests));
+            // Также сохраним в формате JSON для скачивания
+            const dataStr = JSON.stringify({ tests }, null, 2);
+            console.log('Save this to ab-tests-data.json:', dataStr);
+        }
+
+        // Получить текущие тесты
+        function getTests() {
+            const saved = localStorage.getItem('ab_tests');
+            return saved ? JSON.parse(saved) : [];
+        }
+
+        // Рендер списка тестов
+        function renderTests(tests) {
+            const container = document.getElementById('testsList');
+
+            if (tests.length === 0) {
+                container.innerHTML = '<p style="color: #666;">Нет созданных тестов. Создайте первый тест!</p>';
+                return;
+            }
+
+            container.innerHTML = tests.map(test => `
+                <div class="test-card ${test.active ? '' : 'inactive'}">
+                    <div class="test-header">
+                        <div class="test-name">${test.name}</div>
+                        <div class="test-status ${test.active ? 'active' : 'inactive'}">
+                            ${test.active ? 'Активен' : 'Неактивен'}
+                        </div>
+                    </div>
+                    <div class="test-details">
+                        <div><strong>Оригинал:</strong> ${test.original_url}</div>
+                        <div><strong>Тест:</strong> ${test.test_url}</div>
+                        <div><strong>Трафик на тест:</strong> ${test.traffic_percent}%</div>
+                        ${test.utm_conditions && test.utm_conditions.length > 0 ?
+                            `<div><strong>UTM:</strong> ${test.utm_conditions[0].param} ${test.utm_conditions[0].operator} "${test.utm_conditions[0].value}"</div>`
+                            : ''}
+                    </div>
+                    <div class="test-actions">
+                        <button class="btn btn-toggle" onclick="toggleTest('${test.id}', ${!test.active})">
+                            ${test.active ? '⏸ Остановить' : '▶ Запустить'}
+                        </button>
+                        <button class="btn btn-edit" onclick="editTest('${test.id}')">✏️ Редактировать</button>
+                        <button class="btn btn-delete" onclick="deleteTest('${test.id}')">🗑️ Удалить</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Показать модалку создания
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = 'Создать новый тест';
+            document.getElementById('testForm').reset();
+            document.getElementById('testId').value = '';
+            document.getElementById('testModal').classList.add('show');
+        }
+
+        // Закрыть модалку
+        function closeModal() {
+            document.getElementById('testModal').classList.remove('show');
+        }
+
+        // Сохранение теста
+        document.getElementById('testForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const testId = document.getElementById('testId').value || 'test_' + Date.now();
+            const utmParam = document.getElementById('utmParam').value;
+
+            const testData = {
+                id: testId,
+                name: document.getElementById('testName').value,
+                original_url: document.getElementById('originalUrl').value,
+                test_url: document.getElementById('testUrl').value,
+                traffic_percent: parseInt(document.getElementById('trafficPercent').value),
+                url_match: document.getElementById('urlMatch').value,
+                cookie_days: parseInt(document.getElementById('cookieDays').value),
+                active: true,
+                utm_conditions: utmParam ? [{
+                    param: utmParam,
+                    operator: document.getElementById('utmOperator').value,
+                    value: document.getElementById('utmValue').value
+                }] : []
+            };
+
+            const tests = getTests();
+            const index = tests.findIndex(t => t.id === testId);
+
+            if (index >= 0) {
+                tests[index] = testData;
+            } else {
+                tests.push(testData);
+            }
+
+            saveTests(tests);
+            closeModal();
+            loadTests();
+
+            // Показываем JSON для ручного сохранения
+            downloadJSON(tests);
+        });
+
+        // Переключение активности теста
+        function toggleTest(id, active) {
+            const tests = getTests();
+            const test = tests.find(t => t.id === id);
+            if (test) {
+                test.active = active;
+                saveTests(tests);
+                loadTests();
+                downloadJSON(tests);
+            }
+        }
+
+        // Удаление теста
+        function deleteTest(id) {
+            if (!confirm('Удалить этот тест?')) return;
+
+            const tests = getTests().filter(t => t.id !== id);
+            saveTests(tests);
+            loadTests();
+            downloadJSON(tests);
+        }
+
+        // Скачать JSON
+        function downloadJSON(tests) {
+            const dataStr = JSON.stringify({ tests }, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ab-tests-data.json';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            console.log('📥 JSON файл скачан! Загрузите его на сервер как ab-tests-data.json');
+        }
+
+        // Копирование кода установки
+        function copyInstallCode() {
+            const code = '<script src="http://91.222.239.217:9999/ab-test-client.js"><\/script>';
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ Код скопирован в буфер обмена!');
+            });
+        }
+
+        // Загрузка при старте
+        loadTests();
+    </script>
+</body>
+</html>

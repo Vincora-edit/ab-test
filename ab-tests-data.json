@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "id": "demo_test_1",
+      "name": "Демо тест (пример)",
+      "original_url": "/test-page",
+      "test_url": "/test-page-1",
+      "traffic_percent": 50,
+      "url_match": "exact",
+      "active": false,
+      "cookie_days": 30,
+      "utm_conditions": [
+        {
+          "param": "utm_source",
+          "operator": "contains",
+          "value": "Vincora"
+        }
+      ]
+    }
+  ]
+}

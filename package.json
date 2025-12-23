@@ -1,9 +1,10 @@
 {
-  "name": "ab-test-generator-deploy",
-  "version": "1.0.0",
-  "description": "Скрипты для деплоя генератора A/B тестов на Timeweb",
-  "main": "deploy-api.js",
+  "name": "ab-test-server",
+  "version": "2.0.0",
+  "description": "A/B Testing Platform - Google Optimize Alternative",
+  "main": "ab-test-server.js",
   "scripts": {
+    "start": "node ab-test-server.js",
     "deploy": "node deploy-api.js",
     "deploy:server": "node deploy-api.js server",
     "deploy:bash": "bash deploy.sh",
