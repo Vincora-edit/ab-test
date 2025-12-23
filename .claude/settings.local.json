@@ -8,7 +8,11 @@
       "Bash(start \"\" \"d:\\\\Мои документы\\\\cursor\\\\Scripts\\\\ab-test-demo.html\")",
       "Bash(start \"\" \"d:\\\\Мои документы\\\\cursor\\\\Scripts\\\\ab-test-generator.html\")",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git config:*)",
+      "Bash(scp:*)",
+      "Bash(ssh:*)"
     ]
   }
 }
