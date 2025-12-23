@@ -2,14 +2,19 @@
  * AB Test Client Script
  * Вставьте этот код в <head> вашего сайта ПЕРЕД Метрикой
  *
+ * <script>window.AB_TEST_ID='ВАШ_ID';</script>
  * <script src="http://91.222.239.217:9999/ab-test-client.js"></script>
  */
 
 (function() {
     'use strict';
 
-    // Конфигурация
-    var API_URL = 'http://91.222.239.217:9999/ab-tests-data.json';
+    // Получаем ID клиента из window.AB_TEST_ID
+    var CLIENT_ID = window.AB_TEST_ID || 'default';
+
+    // Конфигурация (используем протокол текущей страницы)
+    var protocol = window.location.protocol;
+    var API_URL = protocol + '//91.222.239.217:9999/tests/' + CLIENT_ID + '.json';
     var COOKIE_PREFIX = 'ab_test_';
     var DEBUG = true;
 

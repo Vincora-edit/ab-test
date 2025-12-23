@@ -280,17 +280,26 @@
         <div class="header">
             <h1>🚀 AB Test Admin Panel</h1>
             <p>Управление A/B тестами</p>
+            <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px;">
+                <strong>Ваш Client ID:</strong> <span id="clientId" style="color: #667eea; font-family: monospace;"></span>
+            </div>
         </div>
 
         <div class="install-code">
             <h2>📋 Код для установки</h2>
             <p style="margin-bottom: 15px; color: #666;">Вставьте этот код в &lt;head&gt; вашего сайта ПЕРЕД Яндекс.Метрикой:</p>
-            <div class="code-block">&lt;script src="http://91.222.239.217:9999/ab-test-client.js"&gt;&lt;/script&gt;</div>
+            <div class="code-block" id="installCode"></div>
             <button class="btn-copy" onclick="copyInstallCode()">📋 Копировать код</button>
         </div>
 
         <div class="tests-panel">
-            <button class="btn-add" onclick="showAddModal()">➕ Создать новый тест</button>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+                <button class="btn-add" onclick="showAddModal()">➕ Создать новый тест</button>
+                <button class="btn-add" style="background: #667eea;" onclick="exportAndDeploy()">📥 Скачать JSON</button>
+                <div style="background: #10b981; color: white; padding: 8px 15px; border-radius: 6px; font-size: 14px; font-weight: 600;">
+                    🚀 Автоматический деплой включен
+                </div>
+            </div>
 
             <div id="testsList">
                 <!-- Тесты будут загружены сюда -->
@@ -367,8 +376,24 @@
     </div>
 
     <script>
-        const API_URL = 'http://91.222.239.217:9999/ab-tests-data.json';
+        // Получаем или создаём уникальный Client ID
+        function getClientId() {
+            let clientId = localStorage.getItem('ab_client_id');
+            if (!clientId) {
+                clientId = 'client_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('ab_client_id', clientId);
+            }
+            return clientId;
+        }
+
+        const CLIENT_ID = getClientId();
+        const API_URL = `http://91.222.239.217:9999/tests/${CLIENT_ID}.json`;
+        const SAVE_API = 'http://91.222.239.217:9999/save-tests';
         const USE_LOCALSTORAGE = true; // Используем localStorage вместо API
+        const AUTO_DEPLOY = true; // Автоматический деплой при сохранении
+
+        // Показываем Client ID пользователю
+        document.getElementById('clientId').textContent = CLIENT_ID;
 
         // Загрузка тестов
         function loadTests() {
@@ -393,10 +418,77 @@
         // Сохранение в localStorage
         function saveTests(tests) {
             localStorage.setItem('ab_tests', JSON.stringify(tests));
-            // Также сохраним в формате JSON для скачивания
-            const dataStr = JSON.stringify({ tests }, null, 2);
-            console.log('Save this to ab-tests-data.json:', dataStr);
+
+            // Автоматический деплой на сервер
+            if (AUTO_DEPLOY) {
+                deployToServer(tests);
+            }
         }
+
+        // Деплой на сервер (автоматически)
+        function deployToServer(tests) {
+            fetch(SAVE_API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    client_id: CLIENT_ID,
+                    tests
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Автоматически сохранено на сервере:', data);
+                    showNotification('✅ Сохранено на сервере!');
+                } else {
+                    console.error('❌ Ошибка сохранения:', data);
+                    showNotification('⚠️ Ошибка сохранения', 'error');
+                }
+            })
+            .catch(err => {
+                console.error('❌ Ошибка соединения:', err);
+                showNotification('⚠️ Нет связи с сервером', 'error');
+            });
+        }
+
+        // Уведомления
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : '#ef4444'};
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+                font-weight: 600;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Добавим CSS анимации
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(400px); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(400px); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
 
         // Получить текущие тесты
         function getTests() {
@@ -488,9 +580,6 @@
             saveTests(tests);
             closeModal();
             loadTests();
-
-            // Показываем JSON для ручного сохранения
-            downloadJSON(tests);
         });
 
         // Переключение активности теста
@@ -501,7 +590,6 @@
                 test.active = active;
                 saveTests(tests);
                 loadTests();
-                downloadJSON(tests);
             }
         }
 
@@ -512,7 +600,17 @@
             const tests = getTests().filter(t => t.id !== id);
             saveTests(tests);
             loadTests();
+        }
+
+        // Экспорт JSON (ручное скачивание для бэкапа)
+        function exportAndDeploy() {
+            const tests = getTests();
+            if (tests.length === 0) {
+                alert('Нет тестов для экспорта!');
+                return;
+            }
             downloadJSON(tests);
+            showNotification('📥 JSON файл скачан (бэкап)');
         }
 
         // Скачать JSON
@@ -529,16 +627,39 @@
             console.log('📥 JSON файл скачан! Загрузите его на сервер как ab-tests-data.json');
         }
 
+        // Генерация кода установки
+        function generateInstallCode() {
+            const code = `<script>window.AB_TEST_ID='${CLIENT_ID}';<\/script>\n<script src="//91.222.239.217:9999/ab-test-client.js"><\/script>`;
+            document.getElementById('installCode').textContent = code;
+            return code;
+        }
+
         // Копирование кода установки
         function copyInstallCode() {
-            const code = '<script src="http://91.222.239.217:9999/ab-test-client.js"><\/script>';
-            navigator.clipboard.writeText(code).then(() => {
-                alert('✅ Код скопирован в буфер обмена!');
-            });
+            const code = generateInstallCode();
+
+            // Fallback для HTTP (без HTTPS)
+            const textArea = document.createElement('textarea');
+            textArea.value = code;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                document.execCommand('copy');
+                showNotification('✅ Код скопирован в буфер обмена!');
+            } catch (err) {
+                prompt('Скопируйте код:', code);
+            }
+
+            document.body.removeChild(textArea);
         }
 
         // Загрузка при старте
         loadTests();
+        generateInstallCode();
     </script>
 </body>
 </html>
