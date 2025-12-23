@@ -118,6 +118,13 @@ class ABTestHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
 
 if __name__ == '__main__':
+    # Set UTF-8 encoding for Windows console
+    import sys
+    if sys.platform == 'win32':
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
     with socketserver.TCPServer(("", PORT), ABTestHandler) as httpd:
         print(f"🚀 AB Test Server running on http://localhost:{PORT}")
         print(f"📊 Admin panel: http://localhost:{PORT}/ab-test-admin.html")
