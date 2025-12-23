@@ -182,13 +182,15 @@
                 } catch (e) {
                     log('Error parsing tests:', e);
                 }
+            } else if (xhr.status === 404) {
+                log('No tests configured yet (404) - this is normal');
             } else {
                 log('Error loading tests:', xhr.status);
             }
         };
 
         xhr.onerror = function() {
-            log('Network error loading tests');
+            log('Network error loading tests - this is ok if no tests created yet');
         };
 
         xhr.send();
