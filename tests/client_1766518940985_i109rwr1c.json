@@ -8,7 +8,7 @@
       "traffic_percent": 50,
       "url_match": "exact",
       "cookie_days": 30,
-      "active": false,
+      "active": true,
       "utm_conditions": [
         {
           "param": "utm_source",
