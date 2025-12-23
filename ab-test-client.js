@@ -114,11 +114,17 @@
     function performRedirect(url) {
         // Сохраняем все query параметры (UTM метки и др.)
         var currentParams = window.location.search;
+        var currentHash = window.location.hash;
         var redirectUrl = url;
 
         if (currentParams) {
             // Если у целевого URL уже есть параметры, добавляем через &
             redirectUrl += (url.indexOf('?') === -1 ? '?' : '&') + currentParams.substring(1);
+        }
+
+        // Сохраняем hash (#section)
+        if (currentHash) {
+            redirectUrl += currentHash;
         }
 
         log('Redirecting to:', redirectUrl);
