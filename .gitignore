@@ -1,0 +1,19 @@
+# Приватные данные
+.env
+*.pem
+*.key
+
+# Node modules
+node_modules/
+package-lock.json
+
+# Временные файлы
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp

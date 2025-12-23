@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор A/B тест скрипта для Tilda</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(120deg); }
+            66% { transform: translate(-20px, 20px) rotate(240deg); }
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 30px 90px rgba(0,0,0,0.4);
+            overflow: hidden;
+            position: relative;
+            animation: slideIn 0.6s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 12px;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            opacity: 0.95;
+            font-size: 15px;
+            position: relative;
+            z-index: 1;
+            font-weight: 500;
+        }
+
+        .form-section {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background: #f8fafc;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+            background: white;
+            transform: translateY(-1px);
+        }
+
+        .form-group input:hover,
+        .form-group select:hover {
+            border-color: #cbd5e0;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 6px;
+            color: #718096;
+            font-size: 13px;
+        }
+
+        .conditions-section {
+            background: #f7fafc;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 10px;
+        }
+
+        .condition-row {
+            display: grid;
+            grid-template-columns: 1fr 120px 1fr 40px;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: end;
+        }
+
+        .condition-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .btn-remove {
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .btn-remove:hover {
+            background: #e53e3e;
+            transform: scale(1.05);
+        }
+
+        .btn-add {
+            background: #48bb78;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+
+        .btn-add:hover {
+            background: #38a169;
+        }
+
+        .btn-generate {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 18px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-generate::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-generate:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+        }
+
+        .btn-generate:active {
+            transform: translateY(-1px);
+        }
+
+        .output-section {
+            padding: 30px;
+            background: #1a202c;
+            display: none;
+        }
+
+        .output-section.active {
+            display: block;
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .output-header h3 {
+            color: #fff;
+            font-size: 18px;
+        }
+
+        .btn-copy {
+            background: #48bb78;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-copy:hover {
+            background: #38a169;
+        }
+
+        .btn-copy.copied {
+            background: #4299e1;
+        }
+
+        .code-output {
+            background: #2d3748;
+            border-radius: 8px;
+            padding: 20px;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .info-box {
+            background: #edf2f7;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 25px;
+        }
+
+        .info-box h4 {
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .info-box p {
+            color: #4a5568;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .footer {
+            background: #f7fafc;
+            padding: 25px 30px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .footer p {
+            color: #718096;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .footer a:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .condition-row {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-remove {
+                width: 100%;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .container {
+                border-radius: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Генератор A/B Тест Скрипта</h1>
+            <p>Для Tilda и других платформ</p>
+        </div>
+
+        <div class="form-section">
+            <div class="info-box">
+                <h4>ℹ️ Как использовать:</h4>
+                <p>Заполните форму ниже, нажмите "Сгенерировать код" и скопируйте готовый скрипт в HEAD вашего сайта (Tilda → Настройки сайта → Еще → HTML для HEAD)</p>
+            </div>
+
+            <form id="configForm">
+                <div class="form-group">
+                    <label>Оригинальная страница (URL)</label>
+                    <input type="text" id="originalUrl" value="/page-test" required>
+                    <small>Например: /page-test или /landing</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Тестовая страница (URL)</label>
+                    <input type="text" id="testUrl" value="/test-page-1" required>
+                    <small>Например: /test-page-1 или /landing-variant-b</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Тип проверки URL</label>
+                    <select id="urlMatchType">
+                        <option value="exact">Строго равно (точное совпадение)</option>
+                        <option value="contains">Содержит (indexOf)</option>
+                    </select>
+                    <small>Строго равно - рекомендуется для избежания конфликтов</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Процент трафика на тест (%)</label>
+                    <input type="number" id="testTraffic" value="50" min="0" max="100" required>
+                    <small>50 = равное распределение 50/50</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Условия запуска теста (UTM параметры)</label>
+                    <div class="conditions-section" id="conditionsContainer">
+                        <div class="condition-row">
+                            <div>
+                                <input type="text" placeholder="Параметр (utm_source)" value="utm_source" class="param-input">
+                            </div>
+                            <div>
+                                <select class="match-type">
+                                    <option value="contains">Содержит</option>
+                                    <option value="equals">Равно</option>
+                                </select>
+                            </div>
+                            <div>
+                                <input type="text" placeholder="Значение (Google)" value="Vincora" class="value-input">
+                            </div>
+                            <div>
+                                <button type="button" class="btn-remove" onclick="removeCondition(this)">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-add" onclick="addCondition()">+ Добавить условие</button>
+                    <small>Оставьте пустым чтобы тест работал всегда</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Срок хранения cookie (дни)</label>
+                    <input type="number" id="cookieDays" value="30" min="1" max="365" required>
+                    <small>На сколько дней запомнить вариант для пользователя</small>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enableLogs" checked>
+                        <label for="enableLogs" style="margin-bottom: 0;">Включить логи в консоль (для тестирования)</label>
+                    </div>
+                    <small>Отключите перед запуском в продакшене</small>
+                </div>
+
+                <button type="submit" class="btn-generate">✨ Сгенерировать код</button>
+            </form>
+        </div>
+
+        <div class="output-section" id="outputSection">
+            <div class="output-header">
+                <h3>📋 Готовый скрипт:</h3>
+                <button class="btn-copy" onclick="copyCode()">Копировать</button>
+            </div>
+            <div class="code-output" id="codeOutput"></div>
+        </div>
+
+        <div class="footer">
+            <p>Сделано с ❤️ для маркетологов и веб-мастеров</p>
+            <p>
+                <a href="https://github.com/yourusername/ab-test-generator" target="_blank">GitHub</a> •
+                <a href="https://yourwebsite.com" target="_blank">Мой сайт</a>
+                <span class="badge">v1.0</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function addCondition() {
+            const container = document.getElementById('conditionsContainer');
+            const row = document.createElement('div');
+            row.className = 'condition-row';
+            row.innerHTML = `
+                <div>
+                    <input type="text" placeholder="Параметр (utm_source)" class="param-input">
+                </div>
+                <div>
+                    <select class="match-type">
+                        <option value="contains">Содержит</option>
+                        <option value="equals">Равно</option>
+                    </select>
+                </div>
+                <div>
+                    <input type="text" placeholder="Значение" class="value-input">
+                </div>
+                <div>
+                    <button type="button" class="btn-remove" onclick="removeCondition(this)">×</button>
+                </div>
+            `;
+            container.appendChild(row);
+        }
+
+        function removeCondition(btn) {
+            const row = btn.closest('.condition-row');
+            const container = document.getElementById('conditionsContainer');
+            if (container.children.length > 1) {
+                row.remove();
+            } else {
+                alert('Должно быть хотя бы одно условие. Очистите поля, если условия не нужны.');
+            }
+        }
+
+        function copyCode() {
+            const code = document.getElementById('codeOutput').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Скопировано!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const originalUrl = document.getElementById('originalUrl').value;
+            const testUrl = document.getElementById('testUrl').value;
+            const urlMatchType = document.getElementById('urlMatchType').value;
+            const testTraffic = document.getElementById('testTraffic').value;
+            const cookieDays = document.getElementById('cookieDays').value;
+            const enableLogs = document.getElementById('enableLogs').checked;
+
+            // Собираем условия
+            const conditionRows = document.querySelectorAll('.condition-row');
+            const conditions = [];
+            conditionRows.forEach(row => {
+                const param = row.querySelector('.param-input').value.trim();
+                const matchType = row.querySelector('.match-type').value;
+                const value = row.querySelector('.value-input').value.trim();
+                if (param && value) {
+                    conditions.push({ param, matchType, value });
+                }
+            });
+
+            const code = generateScript({
+                originalUrl,
+                testUrl,
+                urlMatchType,
+                testTraffic,
+                conditions,
+                cookieDays,
+                enableLogs
+            });
+
+            document.getElementById('codeOutput').textContent = code;
+            document.getElementById('outputSection').classList.add('active');
+            document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        function generateScript(config) {
+            const conditionsCode = config.conditions.length > 0
+                ? config.conditions.map(c => {
+                    const checkCode = c.matchType === 'contains'
+                        ? `v.indexOf('${c.value}') !== -1`
+                        : `v === '${c.value}'`;
+                    return `{ param: '${c.param}', check: function(v) { return ${checkCode}; } }`;
+                }).join(',\n            ')
+                : '';
+
+            const urlCheckCode = config.urlMatchType === 'exact'
+                ? `var isTest = path === cfg.testUrl;
+    var isOrig = !isTest && path === cfg.originalUrl;`
+                : `var isOrig = path.indexOf(cfg.originalUrl) !== -1;
+    var isTest = path.indexOf(cfg.testUrl) !== -1;`;
+
+            return `<script>
+// A/B TEST SCRIPT - Generated by AB Test Generator
+(function() {
+    'use strict';
+    var cfg = {
+        originalUrl: '${config.originalUrl}',
+        testUrl: '${config.testUrl}',
+        testTraffic: ${config.testTraffic},
+        conditions: [${conditionsCode}],
+        cookieName: 'ab_var',
+        cookieDays: ${config.cookieDays},
+        enableLogs: ${config.enableLogs}
+    };
+    function log(msg, data) {
+        if (!cfg.enableLogs) return;
+        console.log('%c[A/B]%c ' + msg, 'color:#9C27B0;font-weight:bold', 'color:inherit', data||'');
+    }
+    function getCookie(name) {
+        var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+        return m ? decodeURIComponent(m[1]) : null;
+    }
+    function setCookie(name, value, days) {
+        var d = new Date();
+        d.setTime(d.getTime() + days * 864e5);
+        document.cookie = name + '=' + value + '; expires=' + d.toUTCString() + '; path=/; SameSite=Lax';
+    }
+    function hash(str) {
+        var h = 0;
+        for (var i = 0; i < str.length; i++) {
+            h = ((h << 5) - h) + str.charCodeAt(i);
+            h &= h;
+        }
+        return Math.abs(h) % 100;
+    }
+    function getUserId() {
+        var uid = getCookie('_ab_uid');
+        if (!uid) {
+            uid = Date.now().toString(36) + Math.random().toString(36).substr(2);
+            setCookie('_ab_uid', uid, 365);
+        }
+        return uid;
+    }
+    function checkConditions(conditions) {
+        if (!conditions || !conditions.length) return true;
+        var params = new URLSearchParams(window.location.search);
+        for (var i = 0; i < conditions.length; i++) {
+            var c = conditions[i];
+            var v = params.get(c.param);
+            if (v && c.check(v)) return true;
+        }
+        return false;
+    }
+    function sendToMetrika(variant) {
+        if (window.ym && window.Ya && window.Ya._metrika) {
+            try {
+                var counters = window.Ya._metrika.getCounters();
+                if (counters && counters.length) {
+                    ym(counters[0].id, 'params', { ab_variant: variant });
+                    log('✓ Метрика OK (ID:' + counters[0].id + ')');
+                    return true;
+                }
+            } catch(e) {}
+        }
+        return false;
+    }
+    function sendToRoistat(variant) {
+        if (window.roistat && window.roistat.event) {
+            try {
+                roistat.event.send('ab_test', { variant: variant });
+                log('✓ Roistat OK');
+                return true;
+            } catch(e) {}
+        }
+        return false;
+    }
+    function waitForAnalytics(variant) {
+        var attempts = 0;
+        var maxAttempts = 50;
+        var interval = setInterval(function() {
+            attempts++;
+            var metrikaSent = sendToMetrika(variant);
+            var roistatSent = sendToRoistat(variant);
+            if (metrikaSent || roistatSent || attempts >= maxAttempts) {
+                clearInterval(interval);
+                if (attempts < maxAttempts) {
+                    log('✓ Отправлено (попытка ' + attempts + ')');
+                }
+            }
+        }, 100);
+    }
+    log('═══ ЗАПУСК A/B ТЕСТА ═══');
+    var path = window.location.pathname;
+    ${urlCheckCode}
+    if (!isOrig && !isTest) {
+        log('Страница не участвует');
+        return;
+    }
+    if (!checkConditions(cfg.conditions)) {
+        log('Условия не выполнены');
+        return;
+    }
+    log('✓ Условия ОК');
+    var variant = getCookie(cfg.cookieName);
+    if (!variant) {
+        var bucket = hash(getUserId());
+        variant = bucket < cfg.testTraffic ? 'test' : 'original';
+        setCookie(cfg.cookieName, variant, cfg.cookieDays);
+        log('Новый: ' + variant);
+    } else {
+        log('Вернулся: ' + variant);
+    }
+    if (variant === 'test' && isOrig) {
+        log('🔄 РЕДИРЕКТ → test');
+        window.location.replace(cfg.testUrl + window.location.search);
+    } else if (variant === 'original' && isTest) {
+        log('🔄 РЕДИРЕКТ → original');
+        window.location.replace(cfg.originalUrl + window.location.search);
+    } else {
+        log('✓ Правильная страница');
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                waitForAnalytics(variant);
+            });
+        } else {
+            waitForAnalytics(variant);
+        }
+    }
+})();
+<\/script>`;
+        }
+    </script>
+</body>
+</html>

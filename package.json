@@ -1,0 +1,19 @@
+{
+  "name": "ab-test-generator-deploy",
+  "version": "1.0.0",
+  "description": "Скрипты для деплоя генератора A/B тестов на Timeweb",
+  "main": "deploy-api.js",
+  "scripts": {
+    "deploy": "node deploy-api.js",
+    "deploy:server": "node deploy-api.js server",
+    "deploy:bash": "bash deploy.sh",
+    "deploy:ps": "powershell -ExecutionPolicy Bypass -File deploy.ps1"
+  },
+  "dependencies": {
+    "ssh2": "^1.15.0",
+    "dotenv": "^16.4.1"
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "MIT"
+}

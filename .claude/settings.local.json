@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd /c \"echo %APPDATA%\")",
+      "Bash(where:*)",
+      "Bash(claude mcp list:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(start \"\" \"d:\\\\Мои документы\\\\cursor\\\\Scripts\\\\ab-test-demo.html\")",
+      "Bash(start \"\" \"d:\\\\Мои документы\\\\cursor\\\\Scripts\\\\ab-test-generator.html\")",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

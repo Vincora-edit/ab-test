@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A/B Test Demo - Тестирование скрипта</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .info-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .info-value {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .variant-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .variant-original {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .variant-test {
+            background: #FF9800;
+            color: white;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+            text-decoration: none;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .log-entry {
+            color: #d4d4d4;
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid #667eea;
+            padding-left: 10px;
+        }
+
+        .log-success {
+            border-left-color: #4CAF50;
+        }
+
+        .log-error {
+            border-left-color: #e74c3c;
+        }
+
+        .log-info {
+            border-left-color: #3498db;
+        }
+
+        .simulator {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .url-display {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #333;
+            border: 2px solid #667eea;
+        }
+
+        .analytics-status {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .analytics-badge {
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .analytics-ok {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .analytics-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+
+    <!-- A/B TEST SCRIPT -->
+    <script>
+    (function() {
+        'use strict';
+
+        // ============================================
+        // КОНФИГУРАЦИЯ
+        // ============================================
+
+        var config = {
+            originalUrl: '/bankruptcy',
+            testUrl: '/besplatnoe-too',
+            testTraffic: 50,
+            cookieName: 'ab_var',
+            cookieDays: 30,
+            debug: true  // Режим отладки для демо
+        };
+
+        // ============================================
+        // Служебные функции
+        // ============================================
+
+        var debugLog = [];
+
+        function log(message, type) {
+            type = type || 'info';
+            var timestamp = new Date().toLocaleTimeString();
+            debugLog.push({ time: timestamp, message: message, type: type });
+            console.log('[AB-Test ' + timestamp + '] ' + message);
+
+            // Сохраняем в window для доступа из HTML
+            if (typeof window !== 'undefined') {
+                window.abTestLog = debugLog;
+            }
+        }
+
+        function getCookie(name) {
+            var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+            return m ? decodeURIComponent(m[1]) : null;
+        }
+
+        function setCookie(name, value, days) {
+            var d = new Date();
+            d.setTime(d.getTime() + days * 864e5);
+            document.cookie = name + '=' + value + '; expires=' + d.toUTCString() + '; path=/; SameSite=Lax';
+            log('Cookie установлена: ' + name + ' = ' + value, 'success');
+        }
+
+        function hash(str) {
+            var h = 0;
+            for (var i = 0; i < str.length; i++) {
+                h = ((h << 5) - h) + str.charCodeAt(i);
+                h = h & h;
+            }
+            return Math.abs(h) % 100;
+        }
+
+        function getUserId() {
+            var uid = getCookie('_ab_uid');
+            if (!uid) {
+                uid = Date.now().toString(36) + Math.random().toString(36).substr(2);
+                setCookie('_ab_uid', uid, 365);
+                log('Создан новый User ID: ' + uid, 'success');
+            } else {
+                log('Найден существующий User ID: ' + uid, 'info');
+            }
+            return uid;
+        }
+
+        function sendAnalytics(variant) {
+            log('Отправка данных в аналитику для варианта: ' + variant, 'info');
+
+            // Яндекс.Метрика (симуляция)
+            if (window.ym) {
+                try {
+                    if (window.Ya && window.Ya._metrika) {
+                        var counter = window.Ya._metrika.getCounters()[0];
+                        if (counter) {
+                            ym(counter.id, 'params', { ab_variant: variant });
+                            log('✓ Яндекс.Метрика: параметр отправлен', 'success');
+                        }
+                    }
+                } catch(e) {
+                    log('⚠ Яндекс.Метрика: не найдена (это норма для демо)', 'info');
+                }
+            } else {
+                log('⚠ Яндекс.Метрика: не установлена', 'info');
+            }
+
+            // Roistat (симуляция)
+            if (window.roistat && window.roistat.event) {
+                try {
+                    roistat.event.send('ab_test', { variant: variant });
+                    log('✓ Roistat: событие отправлено', 'success');
+                } catch(e) {
+                    log('⚠ Roistat: ошибка отправки - ' + e.message, 'error');
+                }
+            } else {
+                log('⚠ Roistat: не установлен', 'info');
+            }
+        }
+
+        // ============================================
+        // Основная логика
+        // ============================================
+
+        log('===== Запуск A/B теста =====', 'info');
+        log('Конфигурация: Original=' + config.originalUrl + ', Test=' + config.testUrl + ', Traffic=' + config.testTraffic + '%', 'info');
+
+        // В демо режиме читаем путь из GET параметра ?page=
+        var urlParams = new URLSearchParams(window.location.search);
+        var path = config.debug && urlParams.get('page')
+            ? urlParams.get('page')
+            : window.location.pathname;
+
+        log('Текущий URL: ' + path, 'info');
+
+        var isOriginal = path.indexOf(config.originalUrl) !== -1;
+        var isTest = path.indexOf(config.testUrl) !== -1;
+
+        if (!isOriginal && !isTest) {
+            log('Страница не участвует в тесте, выход', 'info');
+
+            // Сохраняем данные для демо-интерфейса
+            window.abTestData = {
+                active: false,
+                reason: 'Страница не участвует в тесте'
+            };
+            return;
+        }
+
+        log('Страница участвует в тесте: ' + (isOriginal ? 'ORIGINAL' : 'TEST'), 'success');
+
+        var saved = getCookie(config.cookieName);
+        var variant;
+
+        if (saved) {
+            variant = saved;
+            log('Найден сохранённый вариант: ' + variant, 'success');
+        } else {
+            var userId = getUserId();
+            var bucket = hash(userId);
+            variant = bucket < config.testTraffic ? 'test' : 'original';
+            log('Новый пользователь. Bucket=' + bucket + ', выбран вариант: ' + variant, 'success');
+            setCookie(config.cookieName, variant, config.cookieDays);
+        }
+
+        // Отправляем в аналитику
+        sendAnalytics(variant);
+
+        // Сохраняем данные для демо-интерфейса
+        window.abTestData = {
+            active: true,
+            variant: variant,
+            currentPage: isOriginal ? 'original' : 'test',
+            userId: getCookie('_ab_uid'),
+            bucket: hash(getCookie('_ab_uid')),
+            needsRedirect: (variant === 'test' && isOriginal) || (variant === 'original' && isTest),
+            redirectUrl: null
+        };
+
+        // Редирект если нужно
+        if (variant === 'test' && isOriginal) {
+            var redirectUrl = config.testUrl + window.location.search;
+            log('🔄 Требуется редирект на тестовую страницу: ' + redirectUrl, 'success');
+            window.abTestData.redirectUrl = redirectUrl;
+
+            // В демо режиме не делаем реальный редирект
+            if (!config.debug) {
+                window.location.replace(redirectUrl);
+            }
+        } else if (variant === 'original' && isTest) {
+            var redirectUrl = config.originalUrl + window.location.search;
+            log('🔄 Требуется редирект на оригинальную страницу: ' + redirectUrl, 'success');
+            window.abTestData.redirectUrl = redirectUrl;
+
+            // В демо режиме не делаем реальный редирект
+            if (!config.debug) {
+                window.location.replace(redirectUrl);
+            }
+        } else {
+            log('✓ Пользователь на правильной странице, редирект не требуется', 'success');
+        }
+
+        log('===== A/B тест завершён =====', 'success');
+    })();
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 A/B Test Simulator</h1>
+            <p>Тестовая среда для проверки скрипта A/B тестирования</p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h2>📊 Статус теста</h2>
+                <div class="info-item">
+                    <span class="info-label">Тест активен:</span>
+                    <span class="info-value" id="test-active">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Текущий вариант:</span>
+                    <span id="current-variant">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Текущая страница:</span>
+                    <span class="info-value" id="current-page">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">User ID:</span>
+                    <span class="info-value" id="user-id" style="font-size: 11px;">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Bucket (0-99):</span>
+                    <span class="info-value" id="bucket">-</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Cookies</h2>
+                <div class="info-item">
+                    <span class="info-label">ab_var:</span>
+                    <span class="info-value" id="cookie-variant">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">_ab_uid:</span>
+                    <span class="info-value" id="cookie-uid" style="font-size: 11px;">-</span>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-danger" onclick="clearCookies()">🗑 Очистить cookies</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📈 Аналитика</h2>
+                <div class="analytics-status">
+                    <div class="analytics-badge" id="ym-status">
+                        Яндекс.Метрика: не установлена
+                    </div>
+                </div>
+                <div class="analytics-status">
+                    <div class="analytics-badge" id="roistat-status">
+                        Roistat: не установлен
+                    </div>
+                </div>
+                <p style="margin-top: 15px; font-size: 13px; color: #666;">
+                    В продакшене счётчики автоматически получат параметр <code>ab_variant</code>
+                </p>
+            </div>
+        </div>
+
+        <div class="simulator">
+            <h2 style="margin-bottom: 15px;">🚀 Симуляция входа на сайт</h2>
+            <p style="color: #666; margin-bottom: 15px;">
+                Нажмите кнопку чтобы симулировать переход пользователя с рекламы на вашу страницу:
+            </p>
+
+            <div style="text-align: center;">
+                <button class="btn" onclick="simulateNewUser()" style="font-size: 18px; padding: 15px 30px; background: #4CAF50;">
+                    🚀 Симулировать нового пользователя (тест)
+                </button>
+                <p style="margin-top: 10px; font-size: 13px; color: #fff;">
+                    Нажимайте эту кнопку многократно для проверки распределения 50/50
+                </p>
+            </div>
+
+            <div class="url-display" id="simulated-url">
+                Текущий симулированный URL: <span id="url-text">-</span>
+            </div>
+
+            <div id="redirect-info" style="display: none; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; margin-top: 15px; border-radius: 5px;">
+                <strong>🔄 Скрипт сделает редирект на:</strong>
+                <div id="redirect-url" style="margin-top: 10px; font-family: 'Courier New'; color: #333; font-size: 16px; font-weight: bold;"></div>
+                <p style="margin-top: 10px; font-size: 13px; color: #666;">
+                    В продакшене пользователь увидит эту страницу вместо /bankruptcy
+                </p>
+            </div>
+
+            <div id="no-redirect-info" style="display: none; padding: 15px; background: #d4edda; border-left: 4px solid #28a745; margin-top: 15px; border-radius: 5px;">
+                <strong>✅ Редирект не требуется</strong>
+                <p style="margin-top: 10px; font-size: 13px; color: #155724;">
+                    Пользователь остаётся на странице /bankruptcy (оригинал)
+                </p>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #333;">📊 Статистика тестов</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div style="padding: 10px; background: white; border-radius: 5px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #4CAF50;" id="stat-original">0</div>
+                        <div style="font-size: 13px; color: #666;">Вариант A (Original)</div>
+                    </div>
+                    <div style="padding: 10px; background: white; border-radius: 5px; text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #FF9800;" id="stat-test">0</div>
+                        <div style="font-size: 13px; color: #666;">Вариант B (Test)</div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; text-align: center;">
+                    <button class="btn btn-danger" onclick="resetStats()" style="font-size: 13px; padding: 8px 16px;">
+                        Сбросить статистику
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <h2>📝 Лог выполнения</h2>
+            <div class="log-container" id="log-container">
+                <div class="log-entry">Загрузка...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Функции для демо-интерфейса
+        function getCookie(name) {
+            var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+            return m ? decodeURIComponent(m[1]) : null;
+        }
+
+        function simulateNewUser() {
+            // Очищаем cookies
+            document.cookie = 'ab_var=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            document.cookie = '_ab_uid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            // Перезагружаем на страницу входа
+            window.location.href = window.location.pathname + '?page=/bankruptcy&t=' + Date.now();
+        }
+
+        function resetStats() {
+            localStorage.removeItem('ab_test_stats');
+            updateStats();
+        }
+
+        function updateStats() {
+            var stats = JSON.parse(localStorage.getItem('ab_test_stats') || '{"original": 0, "test": 0}');
+            document.getElementById('stat-original').textContent = stats.original;
+            document.getElementById('stat-test').textContent = stats.test;
+        }
+
+        function incrementStat(variant) {
+            var stats = JSON.parse(localStorage.getItem('ab_test_stats') || '{"original": 0, "test": 0}');
+            stats[variant] = (stats[variant] || 0) + 1;
+            localStorage.setItem('ab_test_stats', JSON.stringify(stats));
+            updateStats();
+        }
+
+        function updateUI() {
+            var data = window.abTestData || {};
+
+            // Обновляем статистику
+            updateStats();
+
+            // Добавляем в статистику только если это новый тест (есть параметр t в URL)
+            var urlParams = new URLSearchParams(window.location.search);
+            var isNewTest = urlParams.has('t') && data.active && data.variant;
+
+            if (isNewTest) {
+                incrementStat(data.variant);
+            }
+
+            // Статус теста
+            document.getElementById('test-active').textContent = data.active ? '✅ Да' : '❌ Нет';
+            document.getElementById('test-active').style.color = data.active ? '#4CAF50' : '#e74c3c';
+
+            // Вариант
+            if (data.variant) {
+                var badge = document.createElement('span');
+                badge.className = 'variant-badge variant-' + data.variant;
+                badge.textContent = data.variant === 'original' ? 'A (Original)' : 'B (Test)';
+                document.getElementById('current-variant').innerHTML = '';
+                document.getElementById('current-variant').appendChild(badge);
+            } else {
+                document.getElementById('current-variant').textContent = '-';
+            }
+
+            // Текущая страница
+            document.getElementById('current-page').textContent = data.currentPage || '-';
+
+            // User ID
+            document.getElementById('user-id').textContent = data.userId || '-';
+
+            // Bucket
+            document.getElementById('bucket').textContent = data.bucket !== undefined ? data.bucket + ' (<50 = Test, >=50 = Original)' : '-';
+
+            // Cookies
+            document.getElementById('cookie-variant').textContent = getCookie('ab_var') || 'не установлена';
+            document.getElementById('cookie-uid').textContent = getCookie('_ab_uid') || 'не установлена';
+
+            // Редирект
+            if (data.needsRedirect && data.redirectUrl) {
+                document.getElementById('redirect-info').style.display = 'block';
+                document.getElementById('redirect-url').textContent = '→ ' + data.redirectUrl;
+                document.getElementById('no-redirect-info').style.display = 'none';
+            } else if (data.active) {
+                document.getElementById('redirect-info').style.display = 'none';
+                document.getElementById('no-redirect-info').style.display = 'block';
+            }
+
+            // Симулированный URL
+            var urlParams = new URLSearchParams(window.location.search);
+            var simulatedPath = urlParams.get('page') || window.location.pathname;
+            document.getElementById('url-text').textContent = window.location.origin + simulatedPath;
+
+            // Лог
+            if (window.abTestLog) {
+                var logHtml = '';
+                window.abTestLog.forEach(function(entry) {
+                    var className = 'log-entry';
+                    if (entry.type === 'success') className += ' log-success';
+                    if (entry.type === 'error') className += ' log-error';
+                    if (entry.type === 'info') className += ' log-info';
+                    logHtml += '<div class="' + className + '">[' + entry.time + '] ' + entry.message + '</div>';
+                });
+                document.getElementById('log-container').innerHTML = logHtml;
+            }
+        }
+
+        // Обновляем UI после загрузки
+        setTimeout(updateUI, 100);
+    </script>
+</body>
+</html>

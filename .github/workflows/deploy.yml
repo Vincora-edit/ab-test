@@ -1,0 +1,45 @@
+name: 🚀 Deploy to Timeweb
+
+on:
+  # Деплой при пуше в main
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'ab-test-generator.html'
+      - '.github/workflows/deploy.yml'
+
+  # Ручной деплой (вы сможете нажать кнопку в GitHub)
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: 📦 Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔑 Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: 🚀 Deploy to Timeweb
+        run: |
+          echo "Deploying to ${{ secrets.SSH_HOST }}..."
+          scp -P ${{ secrets.SSH_PORT }} ab-test-generator.html ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.REMOTE_PATH }}/ab-test-generator.html
+          echo "✅ Deploy successful!"
+
+      - name: ✅ Verify deployment
+        run: |
+          ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "ls -lh ${{ secrets.REMOTE_PATH }}/ab-test-generator.html"
+          echo "File is live at: https://${{ secrets.SSH_HOST }}/ab-test-generator.html"
+
+      - name: 📢 Notify
+        if: success()
+        run: |
+          echo "🎉 Deployment completed successfully!"
+          echo "🌐 URL: https://${{ secrets.SSH_HOST }}/ab-test-generator.html"

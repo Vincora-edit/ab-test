@@ -1,0 +1,130 @@
+<script>
+// VERSION: 2024-12-23-v3-FINAL
+(function() {
+    'use strict';
+    var cfg = {  // ← Изменил с config на cfg
+        originalUrl: '/test-page',
+        testUrl: '/test-page-1',
+        testTraffic: 50,
+        conditions: [{ param: 'utm_source', contains: 'Vincora' }],
+        cookieName: 'ab_var',
+        cookieDays: 30,
+        enableLogs: true
+    };
+    function log(msg, data) {
+        if (!cfg.enableLogs) return;
+        console.log('%c[A/B v3]%c ' + msg, 'color:#FF6B6B;font-weight:bold', 'color:inherit', data||'');
+    }
+    function getCookie(name) {
+        var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+        return m ? decodeURIComponent(m[1]) : null;
+    }
+    function setCookie(name, value, days) {
+        var d = new Date();
+        d.setTime(d.getTime() + days * 864e5);
+        document.cookie = name + '=' + value + '; expires=' + d.toUTCString() + '; path=/; SameSite=Lax';
+    }
+    function hash(str) {
+        var h = 0;
+        for (var i = 0; i < str.length; i++) {
+            h = ((h << 5) - h) + str.charCodeAt(i);
+            h &= h;
+        }
+        return Math.abs(h) % 100;
+    }
+    function getUserId() {
+        var uid = getCookie('_ab_uid');
+        if (!uid) {
+            uid = Date.now().toString(36) + Math.random().toString(36).substr(2);
+            setCookie('_ab_uid', uid, 365);
+        }
+        return uid;
+    }
+    function checkConditions(conditions) {
+        if (!conditions || !conditions.length) return true;
+        var params = new URLSearchParams(window.location.search);
+        for (var i = 0; i < conditions.length; i++) {
+            var c = conditions[i];
+            var v = params.get(c.param);
+            if (v && v.indexOf(c.contains) !== -1) return true;
+        }
+        return false;
+    }
+    function sendToMetrika(variant) {
+        if (window.ym && window.Ya && window.Ya._metrika) {
+            try {
+                var counters = window.Ya._metrika.getCounters();
+                if (counters && counters.length) {
+                    ym(counters[0].id, 'params', { ab_variant: variant });
+                    log('✓ Метрика OK (ID:' + counters[0].id + ')');
+                    return true;
+                }
+            } catch(e) {}
+        }
+        return false;
+    }
+    function sendToRoistat(variant) {
+        if (window.roistat && window.roistat.event) {
+            try {
+                roistat.event.send('ab_test', { variant: variant });
+                log('✓ Roistat OK');
+                return true;
+            } catch(e) {}
+        }
+        return false;
+    }
+    function waitForAnalytics(variant) {
+        var attempts = 0;
+        var maxAttempts = 50;
+        var interval = setInterval(function() {
+            attempts++;
+            var metrikaSent = sendToMetrika(variant);
+            var roistatSent = sendToRoistat(variant);
+            if (metrikaSent || roistatSent || attempts >= maxAttempts) {
+                clearInterval(interval);
+                if (attempts < maxAttempts) {
+                    log('✓ Отправлено (попытка ' + attempts + ')');
+                }
+            }
+        }, 100);
+    }
+    log('═══ v3 ЗАПУСК ═══');
+    var path = window.location.pathname;
+    var isOrig = path.indexOf(cfg.originalUrl) !== -1;
+    var isTest = path.indexOf(cfg.testUrl) !== -1;
+    if (!isOrig && !isTest) {
+        log('Страница не участвует');
+        return;
+    }
+    if (!checkConditions(cfg.conditions)) {
+        log('Условия не выполнены');
+        return;
+    }
+    log('✓ Условия ОК');
+    var variant = getCookie(cfg.cookieName);
+    if (!variant) {
+        var bucket = hash(getUserId());
+        variant = bucket < cfg.testTraffic ? 'test' : 'original';
+        setCookie(cfg.cookieName, variant, cfg.cookieDays);
+        log('Новый: ' + variant);
+    } else {
+        log('Вернулся: ' + variant);
+    }
+    if (variant === 'test' && isOrig) {
+        log('🔄 РЕДИРЕКТ → test');
+        window.location.replace(cfg.testUrl + window.location.search);
+    } else if (variant === 'original' && isTest) {
+        log('🔄 РЕДИРЕКТ → original');
+        window.location.replace(cfg.originalUrl + window.location.search);
+    } else {
+        log('✓ Правильная страница');
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                waitForAnalytics(variant);
+            });
+        } else {
+            waitForAnalytics(variant);
+        }
+    }
+})();
+</script>
