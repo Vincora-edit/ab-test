@@ -12,9 +12,8 @@
     // Получаем ID клиента из window.AB_TEST_ID
     var CLIENT_ID = window.AB_TEST_ID || 'default';
 
-    // Конфигурация (используем протокол текущей страницы)
-    var protocol = window.location.protocol;
-    var API_URL = protocol + '//91.222.239.217:9999/tests/' + CLIENT_ID + '.json';
+    // Конфигурация (используем jsDelivr CDN для HTTPS)
+    var API_URL = 'https://cdn.jsdelivr.net/gh/Vincora-edit/ab-test@main/tests/' + CLIENT_ID + '.json';
     var COOKIE_PREFIX = 'ab_test_';
     var DEBUG = true;
 

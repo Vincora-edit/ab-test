@@ -629,7 +629,7 @@
 
         // Генерация кода установки
         function generateInstallCode() {
-            const code = `<script>window.AB_TEST_ID='${CLIENT_ID}';<\/script>\n<script src="//91.222.239.217:9999/ab-test-client.js"><\/script>`;
+            const code = `<script>window.AB_TEST_ID='${CLIENT_ID}';<\/script>\n<script src="https://cdn.jsdelivr.net/gh/Vincora-edit/ab-test@main/ab-test-client.js"><\/script>`;
             document.getElementById('installCode').textContent = code;
             return code;
         }
