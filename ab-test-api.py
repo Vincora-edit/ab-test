@@ -2,17 +2,53 @@
 """
 Simple HTTP server for AB Test API
 Serves static files and handles POST requests to save ab-tests-data.json
+Auto-deploys changes to GitHub
 """
 
 import http.server
 import socketserver
 import json
 import os
+import subprocess
 from urllib.parse import urlparse, parse_qs
 
 PORT = 9999
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(DIRECTORY, 'ab-tests-data.json')
+
+def auto_deploy_to_github(client_id, tests_count):
+    """Automatically deploy changes to GitHub"""
+    try:
+        # Add tests directory
+        subprocess.run(['git', 'add', 'tests/'],
+                      cwd=DIRECTORY, check=True, capture_output=True)
+
+        # Check if there are changes
+        status = subprocess.run(['git', 'status', '--porcelain'],
+                              cwd=DIRECTORY, capture_output=True, text=True, check=True)
+
+        if not status.stdout.strip():
+            print('ℹ️  No changes to commit')
+            return True
+
+        # Commit
+        commit_msg = f'Update tests for {client_id} ({tests_count} tests)'
+        subprocess.run(['git', 'commit', '-m', commit_msg],
+                      cwd=DIRECTORY, check=True, capture_output=True)
+
+        # Push to GitHub
+        subprocess.run(['git', 'push'],
+                      cwd=DIRECTORY, check=True, capture_output=True)
+
+        print(f'🚀 Auto-deployed to GitHub: {commit_msg}')
+        return True
+
+    except subprocess.CalledProcessError as e:
+        print(f'⚠️  Git error (continuing): {e}')
+        return False
+    except Exception as e:
+        print(f'⚠️  Deploy error (continuing): {e}')
+        return False
 
 class ABTestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -50,20 +86,25 @@ class ABTestHandler(http.server.SimpleHTTPRequestHandler):
                 with open(client_file, 'w', encoding='utf-8') as f:
                     json.dump(client_data, f, indent=2, ensure_ascii=False)
 
+                tests_count = len(data.get('tests', []))
+                print(f'✅ Saved {tests_count} tests for client {client_id}')
+
+                # Auto-deploy to GitHub
+                deployed = auto_deploy_to_github(client_id, tests_count)
+
                 # Send success response
                 response = {
                     'success': True,
                     'message': 'Tests saved successfully',
                     'client_id': client_id,
-                    'count': len(data.get('tests', []))
+                    'count': tests_count,
+                    'deployed': deployed
                 }
 
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps(response).encode('utf-8'))
-
-                print(f'✅ Saved {len(data.get("tests", []))} tests for client {client_id}')
 
             except Exception as e:
                 error_response = {'error': str(e)}
